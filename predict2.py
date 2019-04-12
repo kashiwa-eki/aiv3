@@ -97,65 +97,28 @@ y = to_categorical(y, num_classes=vocab_size)
 model = load_model('lstm9.h5')
 
 #evaluate model
-otext = "however the manual shows exact settings for computer use"
-seed_text = "however the manual shows exact settings for"
-print("original: " + otext + '\n')
-print("predict:  " + generate_seq(model, tokenizer, max_length-1, seed_text, 2))
-print('\n')
+mylist = []
 
-otext = "the bass is tight and articulate which is what you want"
-seed_text = "the bass is tight and articulate which is what"
-print("original: " + otext + '\n')
-print("predict:  " + generate_seq(model, tokenizer, max_length-1, seed_text, 2))
-print('\n')
+for i in range(0,10):
+    x = random.randint(25000,28088)
+    mylist.append(x)
+    print(x)
 
-otext = "not big enough for a strap though with everything else in there"
-seed_text = "not big enough for a strap though with everything else"
-print("original: " + otext + '\n')
-print("predict:  " + generate_seq(model, tokenizer, max_length-1, seed_text, 2))
-print('\n')
+with open(in_filename) as f:
+    lines = f.readlines()
 
-otext = "ive been using daddario xl nickel wounds on my pbass for a long time"
-seed_text = "ive been using daddario xl nickel wounds on my pbass for a"
-print("original: " + otext + '\n')
-print("predict:  " + generate_seq(model, tokenizer, max_length-1, seed_text, 2))
-print('\n')
-
-otext = "it also seem tightly put together at the ends"
-seed_text = "it also seem tightly put together at"
-print("original: " + otext + '\n')
-print("predict:  " + generate_seq(model, tokenizer, max_length-1, seed_text, 2))
-print('\n')
-
-otext = "ive purchased several switchcraft jacks and they just work"
-seed_text = "ive purchased several switchcraft jacks and they"
-print("original: " + otext + '\n')
-print("predict:  " + generate_seq(model, tokenizer, max_length-1, seed_text, 2))
-print('\n')
-
-otext = "however i could have got this product for a lot cheaper"
-seed_text = "however i could have got this product for a"
-print("original: " + otext + '\n')
-print("predict:  " + generate_seq(model, tokenizer, max_length-1, seed_text, 2))
-print('\n')
-
-otext = "no buzzing on the strings when i put it on"
-seed_text = "no buzzing on the strings when i put"
-print("original: " + otext + '\n')
-print("predict:  " + generate_seq(model, tokenizer, max_length-1, seed_text, 2))
-print('\n')
-
-otext = "these are the best ones ive tried so far"
-seed_text = "these are the best ones ive tried"
-print("original: " + otext + '\n')
-print("predict:  " + generate_seq(model, tokenizer, max_length-1, seed_text, 2))
-print('\n')
-
-otext = "the sound is very big full and nice"
-seed_text = "the sound is very big full"
-print("original: " + otext + '\n')
-print("predict:  " + generate_seq(model, tokenizer, max_length-1, seed_text, 2))
-print('\n')
+for v in mylist:
+    otext = lines[v]
+    print("Original: " + otext)
+    owords = otext.split()
+    seed_text=""
+    num_words = len(otext.split())
+    for i in range(0, num_words-2):
+        seed_text += owords[i] + " "
+    seed_text = seed_text.strip()
+    print("Seed:     " + seed_text)
+    print("Predict:  " + generate_seq(model, tokenizer, max_length-1, seed_text, 2))
+    print('\n')
 
 
 

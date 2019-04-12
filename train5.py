@@ -6,8 +6,16 @@ from keras.models import Sequential
 from keras.layers import Dense
 from keras.layers import LSTM
 from keras.layers import Embedding
-from keras.models import load_model
 import random
+import numpy
+import sys
+#from sklearn.model_selection import StratifiedKFold
+from sklearn.model_selection import train_test_split
+numpy.set_printoptions(threshold=sys.maxsize)
+
+seed = 7
+numpy.random.seed(seed)
+
 
 # load doc into memory
 def load_doc(filename):
@@ -51,6 +59,10 @@ def generate_seq(model, tokenizer, max_length, seed_text, n_words):
 in_filename = "review.dat"
 doc = load_doc(in_filename)
 
+#with open(in_filename, "r") as f:
+#    doc = f.read().split('\n')
+
+
 # prepare the tokenizer on the source text
 tokenizer = Tokenizer()
 tokenizer.fit_on_texts([doc])
@@ -82,6 +94,13 @@ for i in range(5, len(encoded)):
 print('Total Sequences: %d' % len(sequences))
 
 
+
+# save sequences to file
+#out_filename = 'review_sequences.txt'
+#save_doc(sequences, out_filename)
+
+#print(sequences)
+
 # pad input sequences
 max_length = max([len(seq) for seq in sequences])
 sequences = pad_sequences(sequences, maxlen=max_length, padding='pre')
@@ -89,73 +108,53 @@ print('Max Sequence Length: %d' % max_length)
 
 #print(sequences)
 
+# save sequences to file
+#out_filename = 'review_sequences.txt'
+#save_doc(sequences, out_filename)
+
 sequences = array(sequences)
 X, y = sequences[:,:-1],sequences[:,-1]
 y = to_categorical(y, num_classes=vocab_size)
 
-# load model
-model = load_model('lstm9.h5')
+#for bake in y:
+#    print(bake)
+
+#print(X)
+
+# define 10-fold cross validation test harness
+#kfold = StratifiedKFold(n_splits=10, shuffle=True, random_state=seed)
+#cvscores = []
+
+#X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=seed)
+
+#print(X_train)
+#print(y_train)
+
+#for train, test in kfold.split(X, y):
+
+# create model
+model = Sequential()
+model.add(Embedding(vocab_size, 50, input_length=max_length-1))
+#model.add(LSTM(100, return_sequences=True))
+model.add(LSTM(128))
+#model.add(Dense(100, activation='relu'))
+model.add(Dense(vocab_size, activation='softmax'))
+print(model.summary())
+
+# compile model
+model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
+
+# fit model
+#model.fit(X_train, y_train, validation_data=(X_test, y_test), epochs=100, verbose=2)
+model.fit(X, y, validation_split=0.2, batch_size=64, epochs=100, verbose=2)
+#print("%s: %.2f%%" % (model.metrics_names[1], scores[1]*100))
+#print("%s: %.2f%%" % (model.metrics_names[1], scores[1]*100))
+#cvscores.append(scores[1] * 100)
+#print("%.2f%% (+/- %.2f%%)" % (numpy.mean(cvscores), numpy.std(cvscores)))
+
+model.save('lstm9.h5')
 
 #evaluate model
-otext = "however the manual shows exact settings for computer use"
-seed_text = "however the manual shows exact settings for"
-print("original: " + otext + '\n')
-print("predict:  " + generate_seq(model, tokenizer, max_length-1, seed_text, 2))
-print('\n')
-
-otext = "the bass is tight and articulate which is what you want"
-seed_text = "the bass is tight and articulate which is what"
-print("original: " + otext + '\n')
-print("predict:  " + generate_seq(model, tokenizer, max_length-1, seed_text, 2))
-print('\n')
-
-otext = "not big enough for a strap though with everything else in there"
-seed_text = "not big enough for a strap though with everything else"
-print("original: " + otext + '\n')
-print("predict:  " + generate_seq(model, tokenizer, max_length-1, seed_text, 2))
-print('\n')
-
-otext = "ive been using daddario xl nickel wounds on my pbass for a long time"
-seed_text = "ive been using daddario xl nickel wounds on my pbass for a"
-print("original: " + otext + '\n')
-print("predict:  " + generate_seq(model, tokenizer, max_length-1, seed_text, 2))
-print('\n')
-
-otext = "it also seem tightly put together at the ends"
-seed_text = "it also seem tightly put together at"
-print("original: " + otext + '\n')
-print("predict:  " + generate_seq(model, tokenizer, max_length-1, seed_text, 2))
-print('\n')
-
-otext = "ive purchased several switchcraft jacks and they just work"
-seed_text = "ive purchased several switchcraft jacks and they"
-print("original: " + otext + '\n')
-print("predict:  " + generate_seq(model, tokenizer, max_length-1, seed_text, 2))
-print('\n')
-
-otext = "however i could have got this product for a lot cheaper"
-seed_text = "however i could have got this product for a"
-print("original: " + otext + '\n')
-print("predict:  " + generate_seq(model, tokenizer, max_length-1, seed_text, 2))
-print('\n')
-
-otext = "no buzzing on the strings when i put it on"
-seed_text = "no buzzing on the strings when i put"
-print("original: " + otext + '\n')
-print("predict:  " + generate_seq(model, tokenizer, max_length-1, seed_text, 2))
-print('\n')
-
-otext = "these are the best ones ive tried so far"
-seed_text = "these are the best ones ive tried"
-print("original: " + otext + '\n')
-print("predict:  " + generate_seq(model, tokenizer, max_length-1, seed_text, 2))
-print('\n')
-
-otext = "the sound is very big full and nice"
-seed_text = "the sound is very big full"
-print("original: " + otext + '\n')
-print("predict:  " + generate_seq(model, tokenizer, max_length-1, seed_text, 2))
-print('\n')
-
-
+print(generate_seq(model, tokenizer, max_length-1, 'good sounding strings and they', 2))
+print(generate_seq(model, tokenizer, max_length-1, 'unwound strings were a tiny bit', 2))
 

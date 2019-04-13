@@ -62,12 +62,12 @@ print('Vocabulary Size: %d' % vocab_size)
 # encode 2 words -> 1; 3 words -> 1
 encoded = tokenizer.texts_to_sequences([doc])[0]
 sequences = list()
-for i in range(3, len(encoded)):
-    sequence = encoded[i-3:i+1]
-    sequences.append(sequence)
-    #print(sequence)
 for i in range(2, len(encoded)):
     sequence = encoded[i-2:i+1]
+    sequences.append(sequence)
+    #print(sequence)
+for i in range(3, len(encoded)):
+    sequence = encoded[i-3:i+1]
     sequences.append(sequence)
     #print(sequence)
 for i in range(4, len(encoded)):
@@ -94,7 +94,7 @@ X, y = sequences[:,:-1],sequences[:,-1]
 y = to_categorical(y, num_classes=vocab_size)
 
 # load model
-model = load_model('lstm9.h5')
+model = load_model('lstm.h5')
 
 #evaluate model
 mylist = []

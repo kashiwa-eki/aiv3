@@ -19,14 +19,17 @@ from keras.models import Sequential
 from keras.layers import Dense
 from keras.layers import LSTM
 from keras.layers import Embedding
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import confusion_matrix
+from sklearn.metrics import accuracy_score, recall_score, precision_score
+from sklearn.metrics import classification_report
+import numpy as np
 import random
-import numpy
 import sys
-numpy.set_printoptions(threshold=sys.maxsize)
 
+# set seed for random number generator
 seed = 7
-numpy.random.seed(seed)
-
+np.random.seed(seed)
 
 # load doc into memory
 def load_doc(filename):
@@ -98,7 +101,14 @@ print('Max Sequence Length: %d' % max_length)
 # assign sequences to input/output elements
 sequences = array(sequences)
 X, y = sequences[:,:-1],sequences[:,-1]
-y = to_categorical(y, num_classes=vocab_size)
+
+# split data into train and test
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.2, shuffle=False)
+y_train = to_categorical(y_train, num_classes=vocab_size)
+y_testc = to_categorical(y_test, num_classes=vocab_size)
+
+# split data into train and test
+#X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.2, shuffle=False)
 
 # create model with single hidden LSTM layer with 128 memory units
 model = Sequential()
@@ -110,10 +120,51 @@ print(model.summary())
 # compile model and evaluate using accuracy
 model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
 
-# fit model using 80% of data for training and 20% for testing. 100 epochs and batch size of 64.
-model.fit(X, y, validation_split=0.2, batch_size=64, epochs=100, verbose=2)
+# fit model using 80% of data for training and 20% for validation. 100 epochs and batch size of 64.
+model.fit(X_train, y_train, validation_split=0.2, batch_size=64, epochs=100, verbose=2)
 
 # save model
 model.save('lstm.h5')
 
+# evaluate model
+score = model.evaluate(X_test, y_testc, batch_size=64, verbose=1)
+print('Test accuracy: ' + str(score[1]))
+
+# predict the test set results
+y_pred = model.predict_classes(X_test, batch_size=64, verbose=1)
+print(y_pred)
+print(y_test)
+
+# create a confusion matrix
+cm = confusion_matrix(y_test, y_pred)
+print('Confusion Matrix')
+print(cm)
+#print(classification_report(y_test, y_pred))
+print("Accuracy:  " + str(accuracy_score(y_test, y_pred)))
+print("Recall:   " + str(recall_score(y_test, y_pred, average='micro')))
+print("Precision:        " + str(precision_score(y_test, y_pred, average='micro')))
+
+# run some examples
+mylist = []
+
+for i in range(0,10):
+    x = random.randint(25000,28088)
+    mylist.append(x)
+    print(x)
+
+with open(in_filename) as f:
+    lines = f.readlines()
+
+for v in mylist:
+    otext = lines[v]
+    print("Original: " + otext)
+    owords = otext.split()
+    seed_text=""
+    num_words = len(otext.split())
+    for i in range(0, num_words-2):
+        seed_text += owords[i] + " "
+    seed_text = seed_text.strip()
+    print("Seed:     " + seed_text)
+    print("Predict:  " + generate_seq(model, tokenizer, max_length-1, seed_text, 2))
+    print('\n')
 

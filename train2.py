@@ -85,14 +85,6 @@ print('Vocabulary Size: %d' % vocab_size)
 sequences = list()
 for line in doc.split('\n'):
 	encoded = tokenizer.texts_to_sequences([line])[0]
-#	sequence = encoded[:len(encoded)-1]
-#	sequences.append(sequence)
-#	print(sequence)
-#	sequence = encoded[:]
-#	sequence = encoded[:]
-#	sequences.append(sequence)
-#	print(sequence)
-#	sequence = encoded[:]
 	for i in range(-1, len(encoded)-3):
 		sequence = encoded[i+1:]
 		print(sequence)
@@ -102,6 +94,8 @@ for line in doc.split('\n'):
 		print(sequence)
 		sequences.append(sequence)
 print('Total Sequences: %d' % len(sequences))
+
+sys.exit()
 
 # save sequences to file
 #out_filename = 'review_sequences.txt'

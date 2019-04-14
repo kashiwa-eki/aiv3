@@ -74,22 +74,24 @@ print('Vocabulary Size: %d' % vocab_size)
 # convert text to integers for sequences
 encoded = tokenizer.texts_to_sequences([doc])[0]
 sequences = list()
-# generate sequence 2 words in -> 1 word out
+
+# create sequences
+#for i in range(1, len(encoded)):
+#    sequence = encoded[i-1:i+1]
+#    sequences.append(sequence)
 for i in range(2, len(encoded)):
     sequence = encoded[i-2:i+1]
     sequences.append(sequence)
-# generate sequence 3 words in -> 1 word out
 for i in range(3, len(encoded)):
     sequence = encoded[i-3:i+1]
     sequences.append(sequence)
-# generate sequence 4 words in -> 1 word out
 for i in range(4, len(encoded)):
     sequence = encoded[i-4:i+1]
     sequences.append(sequence)
-# generate sequence 5 words in -> 1 word out
 for i in range(5, len(encoded)):
     sequence = encoded[i-5:i+1]
     sequences.append(sequence)
+
 
 print('Total Sequences: %d' % len(sequences))
 
@@ -98,7 +100,7 @@ max_length = max([len(seq) for seq in sequences])
 sequences = pad_sequences(sequences, maxlen=max_length, padding='pre')
 print('Max Sequence Length: %d' % max_length)
 
-# assign sequences to input/output elements
+# assign input/output elements for model
 sequences = array(sequences)
 X, y = sequences[:,:-1],sequences[:,-1]
 
@@ -120,8 +122,8 @@ print(model.summary())
 # compile model and evaluate using accuracy
 model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
 
-# fit model using 80% of data for training and 20% for validation. 100 epochs and batch size of 64.
-model.fit(X_train, y_train, validation_split=0.2, batch_size=64, epochs=100, verbose=2)
+# fit model using training data. 100 epochs and batch size of 64.
+model.fit(X_train, y_train, validation_data=(X_test, y_testc), batch_size=64, epochs=100, verbose=2)
 
 # save model
 model.save('lstm.h5')

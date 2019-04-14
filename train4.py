@@ -4,6 +4,7 @@ from keras.utils import to_categorical
 from keras.preprocessing.sequence import pad_sequences
 from keras.models import Sequential
 from keras.layers import Dense
+from keras.layers import Flatten
 from keras.layers import LSTM
 from keras.layers import Embedding
 import random
@@ -71,20 +72,30 @@ tokenizer.fit_on_texts([doc])
 vocab_size = len(tokenizer.word_index) + 1
 print('Vocabulary Size: %d' % vocab_size)
 
-# encode 2 words -> 1; 3 words -> 1
-encoded = tokenizer.texts_to_sequences([doc])[0]
+
+# create line-based sequences
 sequences = list()
-for i in range(3, len(encoded)):
-    sequence = encoded[i-3:i+1]
-    sequences.append(sequence)
-    #print(sequence)
-for i in range(2, len(encoded)):
-    sequence = encoded[i-2:i+1]
-    sequences.append(sequence)
-    #print(sequence)
+for line in doc.split('\n'):
+        encoded = tokenizer.texts_to_sequences([line])[0]
+#        sequence = encoded[:-1]
+#        sequences.append(sequence)
+#        sequence = encoded[:]
+#        sequences.append(sequence)
+        for i in range(-1, len(encoded)-3):
+                sequence = encoded[i+1:]
+                #print(sequence)
+                sequences.append(sequence)
+        for i in range(-1, len(encoded)-4):
+                sequence = encoded[i+1:len(encoded)-1]
+                #print(sequence)
+                sequences.append(sequence)
+
 print('Total Sequences: %d' % len(sequences))
+print(sequences[0])
+print(sequences[1])
 
 
+#sys.exit()
 
 # save sequences to file
 #out_filename = 'review_sequences.txt'
@@ -105,7 +116,20 @@ print('Max Sequence Length: %d' % max_length)
 
 sequences = array(sequences)
 X, y = sequences[:,:-1],sequences[:,-1]
+
+print(X[0])
+print(y[0])
+print(X[1])
+print(y[1])
+
+#sys.exit()
+
 y = to_categorical(y, num_classes=vocab_size)
+
+#print(y[1])
+
+#sys.exit()
+
 
 #for bake in y:
 #    print(bake)
@@ -126,9 +150,10 @@ y = to_categorical(y, num_classes=vocab_size)
 # create model
 model = Sequential()
 model.add(Embedding(vocab_size, 50, input_length=max_length-1))
-#model.add(LSTM(100, return_sequences=True))
+#model.add(LSTM(128, return_sequences=True))
 model.add(LSTM(128))
 #model.add(Dense(100, activation='relu'))
+#model.add(Flatten())
 model.add(Dense(vocab_size, activation='softmax'))
 print(model.summary())
 
@@ -137,13 +162,13 @@ model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accur
 
 # fit model
 #model.fit(X_train, y_train, validation_data=(X_test, y_test), epochs=100, verbose=2)
-model.fit(X, y, validation_split=0.2, batch_size=64, epochs=100, verbose=2)
+model.fit(X, y, validation_split=0.2, batch_size=64, epochs=20, verbose=2)
 #print("%s: %.2f%%" % (model.metrics_names[1], scores[1]*100))
 #print("%s: %.2f%%" % (model.metrics_names[1], scores[1]*100))
 #cvscores.append(scores[1] * 100)
 #print("%.2f%% (+/- %.2f%%)" % (numpy.mean(cvscores), numpy.std(cvscores)))
 
-model.save('lstm8.h5')
+model.save('lstm.h5')
 
 #evaluate model
 print(generate_seq(model, tokenizer, max_length-1, 'good sounding strings and they', 2))

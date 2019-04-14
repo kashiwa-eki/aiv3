@@ -9,44 +9,36 @@ from keras.layers import Embedding
 from keras.models import load_model
 import random
 
+
 # load doc into memory
 def load_doc(filename):
-	# open the file as read only
-	file = open(filename, 'r')
-	# read all text
-	text = file.read()
-	# close the file
-	file.close()
-	return text
+        file = open(filename, 'r')
+        text = file.read()
+        file.close()
+        return text
 
-# save tokens to file, one dialog per line
-def save_doc(lines, filename):
-	data = '\n'.join(lines)
-	file = open(filename, 'w')
-	file.write(data)
-	file.close()
 
 # generate a sequence from a language model
 def generate_seq(model, tokenizer, max_length, seed_text, n_words):
-	in_text = seed_text
-	# generate a fixed number of words
-	for _ in range(n_words):
-		# encode the text as integer
-		encoded = tokenizer.texts_to_sequences([in_text])[0]
-		# pre-pad sequences to a fixed length
-		encoded = pad_sequences([encoded], maxlen=max_length, padding='pre')
-		# predict probabilities for each word
-		yhat = model.predict_classes(encoded, verbose=0)
-		# map predicted word index to word
-		out_word = ''
-		for word, index in tokenizer.word_index.items():
-			if index == yhat:
-				out_word = word
-				break
-		# append to input
-		in_text += ' ' + out_word
-	return in_text
- 
+        in_text = seed_text
+        # generate a fixed number of words
+        for _ in range(n_words):
+                # encode the text as integer
+                encoded = tokenizer.texts_to_sequences([in_text])[0]
+                # pre-pad sequences to a fixed length
+                encoded = pad_sequences([encoded], maxlen=max_length, padding='pre')
+                # predict probabilities for each word
+                yhat = model.predict_classes(encoded, verbose=0)
+                # map predicted word index to word
+                out_word = ''
+                for word, index in tokenizer.word_index.items():
+                        if index == yhat:
+                                out_word = word
+                                break
+                # append to input
+                in_text += ' ' + out_word
+        return in_text
+
 # source text
 in_filename = "review.dat"
 doc = load_doc(in_filename)
@@ -59,39 +51,29 @@ tokenizer.fit_on_texts([doc])
 vocab_size = len(tokenizer.word_index) + 1
 print('Vocabulary Size: %d' % vocab_size)
 
-# encode 2 words -> 1; 3 words -> 1
+# convert text to integers for sequences
 encoded = tokenizer.texts_to_sequences([doc])[0]
 sequences = list()
+
+# create sequences
 for i in range(2, len(encoded)):
     sequence = encoded[i-2:i+1]
     sequences.append(sequence)
-    #print(sequence)
 for i in range(3, len(encoded)):
     sequence = encoded[i-3:i+1]
     sequences.append(sequence)
-    #print(sequence)
 for i in range(4, len(encoded)):
     sequence = encoded[i-4:i+1]
     sequences.append(sequence)
-    #print(sequence)
 for i in range(5, len(encoded)):
     sequence = encoded[i-5:i+1]
     sequences.append(sequence)
-    #print(sequence)
 
 print('Total Sequences: %d' % len(sequences))
 
-
-# pad input sequences
+# take care of variable length sequences by adding padding
 max_length = max([len(seq) for seq in sequences])
-sequences = pad_sequences(sequences, maxlen=max_length, padding='pre')
-print('Max Sequence Length: %d' % max_length)
 
-#print(sequences)
-
-sequences = array(sequences)
-X, y = sequences[:,:-1],sequences[:,-1]
-y = to_categorical(y, num_classes=vocab_size)
 
 # load model
 model = load_model('lstm.h5')
@@ -100,6 +82,7 @@ model = load_model('lstm.h5')
 mylist = []
 
 for i in range(0,10):
+    #x = random.randint(0,20000)
     x = random.randint(25000,28088)
     mylist.append(x)
     print(x)

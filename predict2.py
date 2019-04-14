@@ -56,15 +56,6 @@ encoded = tokenizer.texts_to_sequences([doc])[0]
 sequences = list()
 
 # create sequences
-for i in range(2, len(encoded)):
-    sequence = encoded[i-2:i+1]
-    sequences.append(sequence)
-for i in range(3, len(encoded)):
-    sequence = encoded[i-3:i+1]
-    sequences.append(sequence)
-for i in range(4, len(encoded)):
-    sequence = encoded[i-4:i+1]
-    sequences.append(sequence)
 for i in range(5, len(encoded)):
     sequence = encoded[i-5:i+1]
     sequences.append(sequence)

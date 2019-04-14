@@ -19,7 +19,6 @@ from keras.models import Sequential
 from keras.layers import Dense
 from keras.layers import LSTM
 from keras.layers import Embedding
-from keras.layers import Dropout
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import confusion_matrix
 from sklearn.metrics import accuracy_score, recall_score, precision_score
@@ -73,26 +72,27 @@ vocab_size = len(tokenizer.word_index) + 1
 print('Vocabulary Size: %d' % vocab_size)
 
 # convert text to integers for sequences
-encoded = tokenizer.texts_to_sequences([doc])[0]
 sequences = list()
 
-# create sequences
-#for i in range(1, len(encoded)):
-#    sequence = encoded[i-1:i+1]
-#    sequences.append(sequence)
-for i in range(2, len(encoded)):
-    sequence = encoded[i-2:i+1]
-    sequences.append(sequence)
-for i in range(3, len(encoded)):
-    sequence = encoded[i-3:i+1]
-    sequences.append(sequence)
-for i in range(4, len(encoded)):
-    sequence = encoded[i-4:i+1]
-    sequences.append(sequence)
-for i in range(5, len(encoded)):
-    sequence = encoded[i-5:i+1]
-    sequences.append(sequence)
-
+for line in doc.split('\n'):
+    encoded = tokenizer.texts_to_sequences([line])[0]
+    for i in range(1, len(encoded)):
+        sequence = encoded[i-1:i+1]
+        sequences.append(sequence)
+    for i in range(2, len(encoded)):
+        sequence = encoded[i-2:i+1]
+        sequences.append(sequence)
+    for i in range(3, len(encoded)):
+        sequence = encoded[i-3:i+1]
+        sequences.append(sequence)
+    if len(encoded) > 4:
+        for i in range(4, len(encoded)):
+            sequence = encoded[i-4:i+1]
+            sequences.append(sequence)
+    if len(encoded) > 5:
+        for i in range(5, len(encoded)):
+            sequence = encoded[i-5:i+1]
+            sequences.append(sequence)
 
 print('Total Sequences: %d' % len(sequences))
 
@@ -131,7 +131,7 @@ model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accur
 model.fit(X_train, y_train, validation_data=(X_test, y_test), batch_size=64, epochs=100, verbose=2)
 
 # save model
-model.save('lstm.h5')
+model.save('lstm-comb.h5')
 
 # evaluate model
 score = model.evaluate(X_test, y_test, batch_size=64, verbose=1)
@@ -148,8 +148,8 @@ print('Confusion Matrix')
 print(cm)
 #print(classification_report(y_test, y_pred))
 print("Accuracy:  " + str(accuracy_score(y_test4cm, y_pred)))
-print("Recall:   " + str(recall_score(y_test4cm, y_pred, average='micro')))
-print("Precision:        " + str(precision_score(y_test4cm, y_pred, average='micro')))
+print("Recall:    " + str(recall_score(y_test4cm, y_pred, average='micro')))
+print("Precision: " + str(precision_score(y_test4cm, y_pred, average='micro')))
 
 # run some examples
 mylist = []
@@ -174,4 +174,5 @@ for v in mylist:
     print("Seed:     " + seed_text)
     print("Predict:  " + generate_seq(model, tokenizer, max_length-1, seed_text, 2))
     print('\n')
+
 

@@ -19,6 +19,7 @@ from keras.models import Sequential
 from keras.layers import Dense
 from keras.layers import LSTM
 from keras.layers import Embedding
+from keras.layers import Dropout
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import confusion_matrix
 from sklearn.metrics import accuracy_score, recall_score, precision_score
@@ -77,22 +78,8 @@ sequences = list()
 for line in doc.split('\n'):
     encoded = tokenizer.texts_to_sequences([line])[0]
     for i in range(1, len(encoded)):
-        sequence = encoded[i-1:i+1]
+        sequence = encoded[:i+1]
         sequences.append(sequence)
-    for i in range(2, len(encoded)):
-        sequence = encoded[i-2:i+1]
-        sequences.append(sequence)
-    for i in range(3, len(encoded)):
-        sequence = encoded[i-3:i+1]
-        sequences.append(sequence)
-    if len(encoded) > 4:
-        for i in range(4, len(encoded)):
-            sequence = encoded[i-4:i+1]
-            sequences.append(sequence)
-    if len(encoded) > 5:
-        for i in range(5, len(encoded)):
-            sequence = encoded[i-5:i+1]
-            sequences.append(sequence)
 
 print('Total Sequences: %d' % len(sequences))
 
@@ -108,7 +95,8 @@ X, y = sequences[:,:-1],sequences[:,-1]
 # split data into train and test
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.2, shuffle=False)
 y_train = to_categorical(y_train, num_classes=vocab_size)
-y_testc = to_categorical(y_test, num_classes=vocab_size)
+y_test4cm = y_test
+y_test = to_categorical(y_test, num_classes=vocab_size)
 
 # split data into train and test
 #X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.2, shuffle=False)
@@ -116,7 +104,10 @@ y_testc = to_categorical(y_test, num_classes=vocab_size)
 # create model with single hidden LSTM layer with 128 memory units
 model = Sequential()
 model.add(Embedding(vocab_size, 50, input_length=max_length-1))
+model.add(LSTM(128, return_sequences=True))
 model.add(LSTM(128))
+model.add(Dropout(0.1))
+model.add(Dense(128, activation='relu'))
 model.add(Dense(vocab_size, activation='softmax'))
 print(model.summary())
 
@@ -124,28 +115,28 @@ print(model.summary())
 model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
 
 # fit model using training data. 100 epochs and batch size of 64.
-model.fit(X_train, y_train, validation_data=(X_test, y_testc), batch_size=64, epochs=100, verbose=2)
+model.fit(X_train, y_train, validation_data=(X_test, y_test), batch_size=64, epochs=100, verbose=2)
 
 # save model
 model.save('lstm-sent.h5')
 
 # evaluate model
-score = model.evaluate(X_test, y_testc, batch_size=64, verbose=1)
+score = model.evaluate(X_test, y_test, batch_size=64, verbose=1)
 print('Test accuracy: ' + str(score[1]))
 
 # predict the test set results
 y_pred = model.predict_classes(X_test, batch_size=64, verbose=1)
 print(y_pred)
-print(y_test)
+print(y_test4cm)
 
 # create a confusion matrix
-cm = confusion_matrix(y_test, y_pred)
+cm = confusion_matrix(y_test4cm, y_pred)
 print('Confusion Matrix')
 print(cm)
 #print(classification_report(y_test, y_pred))
-print("Accuracy:  " + str(accuracy_score(y_test, y_pred)))
-print("Recall:   " + str(recall_score(y_test, y_pred, average='micro')))
-print("Precision:        " + str(precision_score(y_test, y_pred, average='micro')))
+print("Accuracy:  " + str(accuracy_score(y_test4cm, y_pred)))
+print("Recall:    " + str(recall_score(y_test4cm, y_pred, average='micro')))
+print("Precision: " + str(precision_score(y_test4cm, y_pred, average='micro')))
 
 # run some examples
 mylist = []
@@ -170,4 +161,5 @@ for v in mylist:
     print("Seed:     " + seed_text)
     print("Predict:  " + generate_seq(model, tokenizer, max_length-1, seed_text, 2))
     print('\n')
+
 

@@ -19,30 +19,30 @@ from keras.models import Sequential
 from keras.layers import Dense
 from keras.layers import LSTM
 from keras.layers import Embedding
+from keras.layers import Dropout
 from sklearn.model_selection import train_test_split
-import numpy
+from sklearn.metrics import confusion_matrix
+from sklearn.metrics import accuracy_score, recall_score, precision_score
+from sklearn.metrics import classification_report
+import numpy as np
+import random
 import sys
 
-numpy.set_printoptions(threshold=sys.maxsize)
-
+# set seed for random number generator
 seed = 7
-numpy.random.seed(seed)
-
+np.random.seed(seed)
 
 # load doc into memory
 def load_doc(filename):
-	# open the file as read only
 	file = open(filename, 'r')
-	# read all text
 	text = file.read()
-	# close the file
 	file.close()
 	return text
 
 # generate a sequence from a language model
 def generate_seq(model, tokenizer, max_length, seed_text, n_words):
 	in_text = seed_text
-	# generate a fixed number of words
+	# generate a fixed number of words (2 for our example)
 	for _ in range(n_words):
 		# encode the text as integer
 		encoded = tokenizer.texts_to_sequences([in_text])[0]
@@ -60,11 +60,11 @@ def generate_seq(model, tokenizer, max_length, seed_text, n_words):
 		in_text += ' ' + out_word
 	return in_text
  
-# load reviews
+# source data
 in_filename = "review.dat"
 doc = load_doc(in_filename)
 
-# prepare the tokenizer
+# prepare the tokenizer on the source text
 tokenizer = Tokenizer()
 tokenizer.fit_on_texts([doc])
 
@@ -72,91 +72,97 @@ tokenizer.fit_on_texts([doc])
 vocab_size = len(tokenizer.word_index) + 1
 print('Vocabulary Size: %d' % vocab_size)
 
-# create sequences
-#encoded = tokenizer.texts_to_sequences([doc])[0]
+# convert text to integers for sequences
+encoded = tokenizer.texts_to_sequences([doc])[0]
 sequences = list()
 
-for line in doc.split('\n'):
-    encoded = tokenizer.texts_to_sequences([line])[0]
-    for i in range(2, len(encoded)):
-        print(line)
-        print(encoded[:])
-        sequence = encoded[i-2:i+1]
-        print(sequence)
-        sequences.append(sequence)
-    for i in range(3, len(encoded)):
-        sequence = encoded[i-3:i+1]
-        sequences.append(sequence)
-    if len(encoded) > 4:
-        for i in range(4, len(encoded)):
-            sequence = encoded[i-4:i+1]
-            sequences.append(sequence)
-    if len(encoded) > 5:
-        for i in range(5, len(encoded)):
-            sequence = encoded[i-5:i+1]
-            sequences.append(sequence)
+# create sequences
+#for i in range(1, len(encoded)):
+#    sequence = encoded[i-1:i+1]
+#    sequences.append(sequence)
+for i in range(5, len(encoded)):
+    sequence = encoded[i-5:i+1]
+    sequences.append(sequence)
 
-#sys.exit()
 
 print('Total Sequences: %d' % len(sequences))
 
-print(sequences[1])
-print(sequences[2])
-print(sequences[3])
-print(sequences[4])
-print(sequences[5])
-print(sequences[6])
-print(sequences[7])
-print(sequences[8])
-print(sequences[9])
-print(sequences[10])
-print(sequences[11])
-print(sequences[12])
-print(sequences[13])
-print(sequences[14])
-print(sequences[15])
-print(sequences[16])
-
-#sys.exit()
-
-
+# take care of variable length sequences by adding padding
 max_length = max([len(seq) for seq in sequences])
 sequences = pad_sequences(sequences, maxlen=max_length, padding='pre')
 print('Max Sequence Length: %d' % max_length)
 
-# assign input/output elements for sequences
+# assign input/output elements for model
 sequences = array(sequences)
 X, y = sequences[:,:-1],sequences[:,-1]
 
-print(X[1])
-print(y[1])
+# split data into train and test
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.2, shuffle=False)
+y_train = to_categorical(y_train, num_classes=vocab_size)
+y_test4cm = y_test
+y_test = to_categorical(y_test, num_classes=vocab_size)
 
-y = to_categorical(y, num_classes=vocab_size)
+# split data into train and test
+#X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.2, shuffle=False)
 
-#X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=seed)
-
-#print(X_train)
-#print(y_train)
-
-
-# create model with LSTM layer with 128 memory units
+# create model with single hidden LSTM layer with 128 memory units
 model = Sequential()
-model.add(Embedding(vocab_size, 100, input_length=max_length-1))
-model.add(LSTM(256))
+model.add(Embedding(vocab_size, 50, input_length=max_length-1))
+model.add(LSTM(128, return_sequences=True))
+model.add(LSTM(128))
+model.add(Dropout(0.1))
+model.add(Dense(128, activation='relu'))
 model.add(Dense(vocab_size, activation='softmax'))
 print(model.summary())
 
-# compile model
+# compile model and evaluate using accuracy
 model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
 
-# fit model
-#model.fit(X_train, y_train, validation_data=(X_test, y_test), epochs=100, verbose=2)
-model.fit(X, y, validation_split=0.2, batch_size=64, epochs=20, verbose=2)
-#print("%s: %.2f%%" % (model.metrics_names[1], scores[1]*100))
-#print("%s: %.2f%%" % (model.metrics_names[1], scores[1]*100))
-#cvscores.append(scores[1] * 100)
-#print("%.2f%% (+/- %.2f%%)" % (numpy.mean(cvscores), numpy.std(cvscores)))
+# fit model using training data. 100 epochs and batch size of 64.
+model.fit(X_train, y_train, validation_data=(X_test, y_test), batch_size=64, epochs=100, verbose=2)
 
+# save model
 model.save('lstm.h5')
 
+# evaluate model
+score = model.evaluate(X_test, y_test, batch_size=64, verbose=1)
+print('Test accuracy: ' + str(score[1]))
+
+# predict the test set results
+y_pred = model.predict_classes(X_test, batch_size=64, verbose=1)
+print(y_pred)
+print(y_test4cm)
+
+# create a confusion matrix
+cm = confusion_matrix(y_test4cm, y_pred)
+print('Confusion Matrix')
+print(cm)
+#print(classification_report(y_test, y_pred))
+print("Accuracy:  " + str(accuracy_score(y_test4cm, y_pred)))
+print("Recall:   " + str(recall_score(y_test4cm, y_pred, average='micro')))
+print("Precision:        " + str(precision_score(y_test4cm, y_pred, average='micro')))
+
+# run some examples
+mylist = []
+
+for i in range(0,10):
+    x = random.randint(25000,28088)
+    mylist.append(x)
+    print(x)
+
+with open(in_filename) as f:
+    lines = f.readlines()
+
+for v in mylist:
+    otext = lines[v]
+    print("Original: " + otext)
+    owords = otext.split()
+    seed_text=""
+    num_words = len(otext.split())
+    for i in range(0, num_words-2):
+        seed_text += owords[i] + " "
+    seed_text = seed_text.strip()
+    print("Seed:     " + seed_text)
+    print("Predict:  " + generate_seq(model, tokenizer, max_length-1, seed_text, 2))
+    print('\n')
 

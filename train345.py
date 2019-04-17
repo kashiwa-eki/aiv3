@@ -80,9 +80,6 @@ sequences = list()
 #for i in range(1, len(encoded)):
 #    sequence = encoded[i-1:i+1]
 #    sequences.append(sequence)
-for i in range(2, len(encoded)):
-    sequence = encoded[i-2:i+1]
-    sequences.append(sequence)
 for i in range(3, len(encoded)):
     sequence = encoded[i-3:i+1]
     sequences.append(sequence)
@@ -128,7 +125,7 @@ print(model.summary())
 model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
 
 # fit model using training data. 100 epochs and batch size of 64.
-model.fit(X_train, y_train, validation_data=(X_test, y_test), batch_size=500, epochs=100, verbose=2)
+model.fit(X_train, y_train, validation_data=(X_test, y_test), batch_size=64, epochs=100, verbose=2)
 
 # save model
 model.save('lstm.h5')

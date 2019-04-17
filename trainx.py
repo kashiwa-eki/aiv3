@@ -39,6 +39,11 @@ def load_doc(filename):
 	file.close()
 	return text
 
+# return words from sequence
+def sequence_to_text(list_of_indices):
+    words = [reverse_word_map.get(letter) for letter in list_of_indices]
+    return(words)
+
 # generate a sequence from a language model
 def generate_seq(model, tokenizer, max_length, seed_text, n_words):
 	in_text = seed_text
@@ -74,6 +79,9 @@ print('Vocabulary Size: %d' % vocab_size)
 
 # convert text to integers for sequences
 encoded = tokenizer.texts_to_sequences([doc])[0]
+reverse_word_map = dict(map(reversed, tokenizer.word_index.items()))
+#reverse_map = dict(zip(word_to_id.values(), word_to_id.keys()))
+
 sequences = list()
 
 # create sequences
@@ -105,22 +113,41 @@ print('Max Sequence Length: %d' % max_length)
 sequences = array(sequences)
 X, y = sequences[:,:-1],sequences[:,-1]
 
+print(len(sequences))
+print(len(X))
+print(len(y))
+numrows = round(len(X) * 0.8)
+print(numrows)
+X_train = X[:numrows]
+y_train = y[:numrows]
+X_test = X[numrows:]
+y_test = y[numrows:]
+
+print(X_train[numrows-1])
+print(y_train[numrows-1])
+print(sequences[numrows-1])
+print(X_test[0])
+print(y_test[0])
+print(sequences[numrows])
+#print(list(map(sequence_to_text, X_train[numrows-1])))
+#print(list(map(sequence_to_text, X_test[0])))
+print(" ".join([reverse_word_map[x] for x in X_test[:10]]))
+
+sys.exit()
+
 # split data into train and test
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.2, shuffle=False)
+#X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.2, shuffle=False)
 y_train = to_categorical(y_train, num_classes=vocab_size)
 y_test4cm = y_test
 y_test = to_categorical(y_test, num_classes=vocab_size)
 
-# split data into train and test
-#X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.2, shuffle=False)
-
 # create model with single hidden LSTM layer with 128 memory units
 model = Sequential()
 model.add(Embedding(vocab_size, 50, input_length=max_length-1))
-model.add(LSTM(128, return_sequences=True))
-model.add(LSTM(128))
-model.add(Dropout(0.1))
-model.add(Dense(128, activation='relu'))
+#model.add(LSTM(128, return_sequences=True))
+model.add(LSTM(512))
+model.add(Dropout(0.2))
+#model.add(Dense(128, activation='relu'))
 model.add(Dense(vocab_size, activation='softmax'))
 print(model.summary())
 
@@ -128,17 +155,17 @@ print(model.summary())
 model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
 
 # fit model using training data. 100 epochs and batch size of 64.
-model.fit(X_train, y_train, validation_data=(X_test, y_test), batch_size=500, epochs=100, verbose=2)
+model.fit(X_train, y_train, validation_data=(X_test, y_test), batch_size=32, epochs=20, verbose=2)
 
 # save model
 model.save('lstm.h5')
 
 # evaluate model
-score = model.evaluate(X_test, y_test, batch_size=64, verbose=1)
+score = model.evaluate(X_test, y_test, batch_size=32, verbose=1)
 print('Test accuracy: ' + str(score[1]))
 
 # predict the test set results
-y_pred = model.predict_classes(X_test, batch_size=64, verbose=1)
+y_pred = model.predict_classes(X_test, batch_size=32, verbose=1)
 print(y_pred)
 print(y_test4cm)
 

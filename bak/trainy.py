@@ -33,7 +33,7 @@ import sys
 import argparse
 import pickle
 
-data_path = "data"
+data_path = "/home/kashiwa/aiv3/data"
 
 parser = argparse.ArgumentParser()
 parser.add_argument('run_opt', type=int, default=1, help='An integer: 1 to train, 2 to test')
@@ -57,6 +57,11 @@ def save_doc(lines, filename):
 	file.write(data)
 	file.close()
         
+# return words from sequence
+def sequence_to_text(list_of_indices):
+    words = [reverse_word_map.get(letter) for letter in list_of_indices]
+    return(words)
+
 # generate a sequence from a language model
 def generate_seq(model, tokenizer, max_length, seed_text, n_words):
         in_text = seed_text
@@ -69,7 +74,8 @@ def generate_seq(model, tokenizer, max_length, seed_text, n_words):
                 encoded = pad_sequences([encoded], maxlen=max_length, padding='pre')
                 # predict probabilities for each word
                 yhat = model.predict_classes(encoded, verbose=0)
-
+                # map predicted word index to word
+                out_word = ''
                 for word, index in tokenizer.word_index.items():
                         if index == yhat:
                                 out_word = word
@@ -79,94 +85,117 @@ def generate_seq(model, tokenizer, max_length, seed_text, n_words):
                 out_text += ' ' + out_word
         return out_text.strip()
 
+# source data
+in_filename = "data/review.dat"
+doc = load_doc(in_filename)
+count = len(open(in_filename).readlines())
+numrows = round(count * 0.8)
+
+train_doc = ''
+test_doc = ''
+
+cnt = 1
+with open(in_filename) as f:
+    for line in f:
+        #print(line)
+        if cnt > numrows:
+            test_doc += line
+        else:
+            train_doc += line
+        cnt += 1
+
+with open('data/train.txt', 'w') as f:
+    f.write(train_doc)
+with open('data/test.txt', 'w') as f:
+    f.write(test_doc)
+
+
+
+# prepare the tokenizer on the source text
+tokenizer = Tokenizer()
+tokenizer.fit_on_texts([doc])
+
+with open('data/tokenizer.pickle', 'wb') as handle:
+    pickle.dump(tokenizer, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+
+# determine the vocabulary size
+vocab_size = len(tokenizer.word_index) + 1
+print('Vocabulary Size: %d' % vocab_size)
+
+# convert text to integers for sequences
+encoded = tokenizer.texts_to_sequences([train_doc])[0]
+
+# create sequences
+sequences = list()
+for i in range(2, len(encoded)):
+    sequence = encoded[i-2:i+1]
+    sequences.append(sequence)
+for i in range(3, len(encoded)):
+    sequence = encoded[i-3:i+1]
+    sequences.append(sequence)
+for i in range(4, len(encoded)):
+    sequence = encoded[i-4:i+1]
+    sequences.append(sequence)
+for i in range(5, len(encoded)):
+    sequence = encoded[i-5:i+1]
+    sequences.append(sequence)
+
+print('Total Sequences: %d' % len(sequences))
+
+# take care of variable length sequences by adding padding
+train_length = max([len(seq) for seq in sequences])
+#test_length = max([len(seq) for seq in test_sequences])
+#max_length = max(train_length, test_length)
+max_length = train_length
+
+sequences = pad_sequences(sequences, maxlen=max_length, padding='pre')
+#test_sequences = pad_sequences(test_sequences, maxlen=max_length, padding='pre')
+print('Max Sequence Length: %d' % max_length)
+
+# assign input/output elements for model
+sequences = array(sequences)
+X_train, y_train = sequences[:,:-1],sequences[:,-1]
+#test_sequences = array(test_sequences)
+#X_test, y_test = test_sequences[:,:-1],test_sequences[:,-1]
+
+print(X_train[0])
+print(y_train[0])
+#print(X_test[0])
+#print(y_test[0])
+
+#print(len(sequences))
+#print(len(X))
+#print(len(y))
+#numrows = round(len(X) * 0.8)
+#print(numrows)
+#X_train = X[:numrows]
+#y_train = y[:numrows]
+#X_test = X[numrows:]
+#y_test = y[numrows:]
+
+#print(X_train[numrows-1])
+#print(y_train[numrows-1])
+#print(sequences[numrows-1])
+#print(X_test[0])
+#print(y_test[0])
+#print(sequences[numrows])
+#print(list(map(sequence_to_text, X_train[numrows-1])))
+#print(list(map(sequence_to_text, X_test[0])))
+#print(" ".join([reverse_word_map[x] for x in X_test[:10]]))
+
+#sys.exit()
+
+# split data into train and test
+#X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.2, shuffle=False)
+y_train = to_categorical(y_train, num_classes=vocab_size)
+#y_test4cm = y_test
+#y_test = to_categorical(y_test, num_classes=vocab_size)
+
+
 
 if args.run_opt == 1:
-    # source data
-    in_filename = data_path + "/review.dat"
-    train_file = data_path + "/train.txt"
-    test_file = data_path + "/test.txt"
-    doc = load_doc(in_filename)
-    count = len(open(in_filename).readlines())
-    numrows = round(count * 0.8)
-
-    train_doc = ''
-    test_doc = ''
-
-    cnt = 1
-    with open(in_filename) as f:
-        for line in f:
-            #print(line)
-            if cnt > numrows:
-                test_doc += line
-            else:
-                train_doc += line
-            cnt += 1
-
-    with open(train_file, 'w') as f:
-        f.write(train_doc)
-    with open(test_file, 'w') as f:
-        f.write(test_doc)
-
-
-    # prepare the tokenizer on the source text
-    tokenizer = Tokenizer()
-    tokenizer.fit_on_texts([doc])
-
-    # save tokenizer for making predictions later
-    with open('data/tokenizer.pickle', 'wb') as handle:
-        pickle.dump(tokenizer, handle, protocol=pickle.HIGHEST_PROTOCOL)
-
-    # determine the vocabulary size
-    vocab_size = len(tokenizer.word_index) + 1
-    print('Vocabulary Size: %d' % vocab_size)
-
-    # create line-based sequences
-    sequences = list()
-    for line in train_doc.split('\n'):
-        encoded = tokenizer.texts_to_sequences([line])[0]
-        #print(encoded)
-
-        if len(encoded) > 8:
-            startnum = len(encoded) - 8
-        else:
-            startnum = 0
-        for i in range(startnum, len(encoded)-1):
-            sequence = encoded[i:]
-            #print(sequence)
-            sequences.append(sequence)
-
-        if len(encoded) > 9:
-            startnum = len(encoded) - 9
-        else:
-            startnum = 0
-        for i in range(startnum, len(encoded)-2):
-            sequence = encoded[i:len(encoded)-1]
-            #print(sequence)
-            sequences.append(sequence)
-
-    print('Total Sequences: %d' % len(sequences))
-    
-    # get max length of entire sentence for padding
-    max_length = 0
-    for line in doc.split('\n'):
-        encoded = tokenizer.texts_to_sequences([line])[0]
-        #print(encoded)
-        if len(encoded) > max_length:
-            max_length = len(encoded)
-
-    print('Max Length: %d' % max_length)
-
-    sequences = pad_sequences(sequences, maxlen=max_length, padding='pre')
-    print('Max Sequence Length: %d' % max_length)
-
-    # assign input/output elements for model
-    sequences = array(sequences)
-    X_train, y_train = sequences[:,:-1],sequences[:,-1]
-
-    # convert y values to one hot encoding
-    y_train = to_categorical(y_train, num_classes=vocab_size)
-
-    # create model with single hidden LSTM layer with 512 memory units
+    # create model with single hidden LSTM layer with 128 memory units
     model = Sequential()
     model.add(Embedding(vocab_size, 50, input_length=max_length-1))
     model.add(LSTM(512))
@@ -177,20 +206,33 @@ if args.run_opt == 1:
     # compile model and evaluate using accuracy
     model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
 
-    # fit model using training data. validate using 10% of training data which is not trained on. 5 epochs and batch size of 128.
-    model.fit(X_train, y_train, validation_split=0.1, batch_size=128, epochs=5, verbose=2)
+    # fit model using training data. 100 epochs and batch size of 64.
+    model.fit(X_train, y_train, validation_split=0.2, batch_size=32, epochs=30, verbose=2)
 
     # save model
-    model.save(data_path + '/lstm_model.h5')
+    model.save('data/lstm.h5')
 
 elif args.run_opt == 2:
-    # loading
-    with open(data_path + '/tokenizer.pickle', 'rb') as handle:
-        tokenizer = pickle.load(handle)
 
-    # load the model
-    model = load_model(data_path + "/lstm_model.h5")
-    
+    # evaluate model
+    #score = model.evaluate(X_test, y_test, batch_size=32, verbose=1)
+    #print('Test accuracy: ' + str(score[1]))
+
+    # predict the test set results
+    #y_pred = model.predict_classes(X_test, batch_size=32, verbose=1)
+    #print(y_pred)
+    #print(y_test4cm)
+
+    # create a confusion matrix
+    #cm = confusion_matrix(y_test4cm, y_pred)
+    #print('Confusion Matrix')
+    #print(cm)
+    #print(classification_report(y_test, y_pred))
+    #print("Accuracy:  " + str(accuracy_score(y_test4cm, y_pred)))
+    #print("Recall:   " + str(recall_score(y_test4cm, y_pred, average='micro')))
+    #print("Precision:        " + str(precision_score(y_test4cm, y_pred, average='micro')))
+
+    model = load_model(data_path + "/lstm.h5")
     y_true = []
     y_pred = []
     num_right = 0
@@ -200,34 +242,28 @@ elif args.run_opt == 2:
     word2_right = 0
     word2_wrong = 0
     total = 0
-    max_length = 14
 
-    # evaluate model using untrained test data
-    with open(test_file, 'r') as f:
+    # evaluate
+    with open('data/test.txt') as f:
         for line in f:
             otext = line
             print("Original: " + otext)
-            # split into words
             owords = otext.split()
             seed_text= ''
-            # get last two words of sentence
+            end_text = ''
+            end_text = owords[len(owords)-2] + ' ' + owords[len(owords)-1]
             word1_true = owords[len(owords)-2]
             word2_true = owords[len(owords)-1]
             end_true = word1_true + ' ' + word2_true
             print("Actual:   " + end_true)
-            # append to y_true array
             y_true.append(end_true)
-            # build seed text (sentence minus last two words)
             for i in range(0, len(owords)-2):
                 seed_text += owords[i] + " "
             seed_text = seed_text.strip()
             #print("Seed:     " + seed_text)
-            # get predicted last two words
             end_pred = generate_seq(model, tokenizer, max_length-1, seed_text, 2)
             print("Predict:  " + end_pred)
-            # append to y_pred array
             y_pred.append(end_pred)
-            # get each predicted word
             outwords = end_pred.split()
             word1_pred = outwords[0]
             word2_pred = outwords[1]
@@ -246,7 +282,6 @@ elif args.run_opt == 2:
             else:
                 word2_wrong += 1
 
-    # print all metrics
     print(num_right)
     print(num_wrong)
     print(total)

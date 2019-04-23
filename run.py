@@ -21,7 +21,7 @@ from keras.models import Sequential
 from keras.layers import Dense
 from keras.layers import LSTM
 from keras.layers import Embedding
-from keras.layers import Dropout
+from keras.layers import Dropout, TimeDistributed, Activation
 from keras.models import load_model
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import confusion_matrix
@@ -34,6 +34,9 @@ import argparse
 import pickle
 
 data_path = "data"
+in_filename = data_path + "/review.dat"
+train_file = data_path + "/train.txt"
+test_file = data_path + "/test.txt"
 
 parser = argparse.ArgumentParser()
 parser.add_argument('run_opt', type=int, default=1, help='An integer: 1 to train, 2 to test')
@@ -82,9 +85,6 @@ def generate_seq(model, tokenizer, max_length, seed_text, n_words):
 
 if args.run_opt == 1:
     # source data
-    in_filename = data_path + "/review.dat"
-    train_file = data_path + "/train.txt"
-    test_file = data_path + "/test.txt"
     doc = load_doc(in_filename)
     count = len(open(in_filename).readlines())
     numrows = round(count * 0.8)
@@ -168,7 +168,7 @@ if args.run_opt == 1:
 
     # create model with single hidden LSTM layer with 512 memory units
     model = Sequential()
-    model.add(Embedding(vocab_size, 50, input_length=max_length-1))
+    model.add(Embedding(vocab_size, 500, input_length=max_length-1))
     model.add(LSTM(512))
     model.add(Dropout(0.2))
     model.add(Dense(vocab_size, activation='softmax'))
@@ -247,25 +247,28 @@ elif args.run_opt == 2:
                 word2_wrong += 1
 
     # print all metrics
-    print(num_right)
-    print(num_wrong)
-    print(total)
-    print(num_right / total * 100.0)
-    print(word1_right)
-    print(word1_wrong)
-    print(word1_right / total * 100.0)
-    print(word2_right)
-    print(word2_wrong)
-    print(word2_right / total * 100.0)
-    print(y_true[:10])
-    print(y_pred[:10])
+    print("Total Sequences:    " + str(total))
+    print("--------------")
+    print("Last Two Correct:   " + str(num_right))
+    print("Last Two Incorrect: " + str(num_wrong))
+    print("Last Two Accuracy:  " + str(num_right / total * 100.0))
+    print("--------------")
+    print("Word 1 Correct:     " + str(word1_right))
+    print("Word 1 Incorrect:   " + str(word1_wrong))
+    print("Word 1 Accuracy:    " + str(word1_right / total * 100.0))
+    print("--------------")
+    print("Word 2 Correct:     " + str(word2_right))
+    print("Word 2 Incorrect:   " + str(word2_wrong))
+    print("Word 2 Accuracy:    " + str(word2_right / total * 100.0))
+    print("--------------")
 
+    # confusion matrix
     cm = confusion_matrix(y_true, y_pred)
     print(cm)
 
-    #print(classification_report(y_true, y_pred))
+    print(classification_report(y_true, y_pred))
     print("Accuracy:  " + str(accuracy_score(y_true, y_pred)))
-    print("Recall:   " + str(recall_score(y_true, y_pred, average='micro')))
-    print("Precision:        " + str(precision_score(y_true, y_pred, average='micro')))
+    #print("Recall:   " + str(recall_score(y_true, y_pred, average='micro')))
+    #print("Precision:        " + str(precision_score(y_true, y_pred, average='micro')))
 
 

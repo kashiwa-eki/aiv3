@@ -121,8 +121,8 @@ if args.run_opt == 1:
     tokenizer.fit_on_texts([train_doc])
 
     # save tokenizer for making predictions later
-    with open('data/tokenizer.pickle', 'wb') as handle:
-        pickle.dump(tokenizer, handle, protocol=pickle.HIGHEST_PROTOCOL)
+    #with open('data/tokenizer.pickle', 'wb') as handle:
+    #    pickle.dump(tokenizer, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
     # determine the vocabulary size
     vocab_size = len(tokenizer.word_index) + 1
@@ -132,24 +132,20 @@ if args.run_opt == 1:
 
     # create line-based sequences
     sequences = list()
+    for line in train_doc.split('\n'):
+        encoded = tokenizer.texts_to_sequences([line])[0]
+        print(encoded)
 
-    # create sequences
-    for i in range(1, len(encoded)):
-        sequence = encoded[i-1:i+1]
-        sequences.append(sequence)
-    for i in range(2, len(encoded)):
-        sequence = encoded[i-2:i+1]
-        sequences.append(sequence)
-    for i in range(3, len(encoded)):
-        sequence = encoded[i-3:i+1]
-        sequences.append(sequence)
-    for i in range(4, len(encoded)):
-        sequence = encoded[i-4:i+1]
-        sequences.append(sequence)
-    for i in range(5, len(encoded)):
-        sequence = encoded[i-5:i+1]
-        sequences.append(sequence)    
-  
+        if len(encoded) > 7:
+            startnum = len(encoded) - 7
+        else:
+            startnum = 0
+        for i in range(startnum, len(encoded)-2):
+            sequence = encoded[i:]
+            print(sequence)
+            sequences.append(sequence)
+    #sys.exit()
+
     print('Total Sequences: %d' % len(sequences))
     
     # get max length of entire sentence for padding
@@ -161,21 +157,20 @@ if args.run_opt == 1:
             max_length = len(encoded)
 
     print('Max Length: %d' % max_length)
-
-    max_length = max([len(seq) for seq in sequences])
+    max_length = 7
     sequences = pad_sequences(sequences, maxlen=max_length, padding='pre')
     print('Max Sequence Length: %d' % max_length)
 
     # assign input/output elements for model
     sequences = array(sequences)
-    X_train, y_train = sequences[:,:-1],sequences[:,-1]
+    X_train, y_train = sequences[:,:-2],sequences[:,-2]
 
     # convert y values to one hot encoding
     y_train = to_categorical(y_train, num_classes=vocab_size)
 
     # create model with single hidden LSTM layer with 512 memory units
     model = Sequential()
-    model.add(Embedding(vocab_size, 500, input_length=max_length-1))
+    model.add(Embedding(vocab_size, 50, input_length=max_length-1))
     model.add(LSTM(512))
     model.add(Dropout(0.2))
     model.add(Dense(vocab_size, activation='softmax'))
@@ -207,7 +202,7 @@ elif args.run_opt == 2:
     word2_right = 0
     word2_wrong = 0
     total = 0
-    max_length = 6
+    max_length = 14
 
     # evaluate model using untrained test data
     with open(test_file, 'r') as f:

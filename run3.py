@@ -225,10 +225,12 @@ elif args.run_opt == 2:
             # append to y_true array
             y_true.append(end_true)
             # build seed text (sentence minus last two words)
-            if len(owords) > 4:
-                startnum = len(owords) - 4
-            else:
-                startnum = 0
+            
+            startnum = 0
+            #if len(owords) > 4:
+            #    startnum = len(owords) - 4
+            #else:
+            #    startnum = 0
             for i in range(startnum, len(owords)-2):
                 seed_text += owords[i] + " "
             seed_text = seed_text.strip()

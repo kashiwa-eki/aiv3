@@ -46,20 +46,7 @@ if args.data_path:
     data_path = args.data_path
 
 
-# load doc into memory
-def load_doc(filename):
-	file = open(filename, 'r')
-	text = file.read()
-	file.close()
-	return text
 
-# save doc
-def save_doc(lines, filename):
-	data = '\n'.join(lines)
-	file = open(filename, 'w')
-	file.write(data)
-	file.close()
-        
 # generate a sequence from a language model
 def generate_seq(model, tokenizer, max_length, seed_text, n_words):
         in_text = seed_text
@@ -85,7 +72,7 @@ def generate_seq(model, tokenizer, max_length, seed_text, n_words):
 
 if args.run_opt == 1:
 
-    # read source and shuffle lines
+    # read source reviews and shuffle for training and testing
     with open(source_file, "r") as f:
         data = f.read().split('\n')
 
@@ -110,6 +97,7 @@ if args.run_opt == 1:
             train_doc += line + '\n'
         cnt += 1
 
+    # save training and test datasets to documents
     with open(train_file, 'w') as f:
         f.write(train_doc)
     with open(test_file, 'w') as f:
@@ -153,15 +141,6 @@ if args.run_opt == 1:
     print('Total Sequences: %d' % len(sequences))
     
     # get max length of entire sentence for padding
-    max_length = 0
-    for line in train_doc.split('\n'):
-        encoded = tokenizer.texts_to_sequences([line])[0]
-        #print(encoded)
-        if len(encoded) > max_length:
-            max_length = len(encoded)
-
-    print('Max Length: %d' % max_length)
-
     max_length = max([len(seq) for seq in sequences])
     sequences = pad_sequences(sequences, maxlen=max_length, padding='pre')
     print('Max Sequence Length: %d' % max_length)
@@ -175,16 +154,20 @@ if args.run_opt == 1:
 
     # create model with single hidden LSTM layer with 512 memory units
     model = Sequential()
+    # add learned word embedding in input layer
     model.add(Embedding(vocab_size, 500, input_length=max_length-1))
+    # add single hidden LSTM layer with 512 memory units
     model.add(LSTM(512))
+    # add dropout layer to prevent overfitting
     model.add(Dropout(0.2))
+    # output layer with softmax to normalize
     model.add(Dense(vocab_size, activation='softmax'))
     print(model.summary())
 
     # compile model and evaluate using accuracy
     model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
 
-    # fit model using training data. validate using 10% of training data which is not trained on. 5 epochs and batch size of 128.
+    # fit model using training data. validate using 10% of training data which is not trained on. 10 epochs and batch size of 32.
     model.fit(X_train, y_train, validation_split=0.1, batch_size=32, epochs=10, verbose=2)
 
     # save model
@@ -275,13 +258,11 @@ elif args.run_opt == 2:
     print("Word 2 Accuracy:    " + str(word2_right / total * 100.0))
     print("--------------")
 
-    # confusion matrix
-    cm = confusion_matrix(y_true, y_pred)
-    print(cm)
+    # confusion matrix - removed as no longer needed
+    #cm = confusion_matrix(y_true, y_pred)
+    #print(cm)
 
-    #print(classification_report(y_true, y_pred))
-    print("Accuracy:  " + str(accuracy_score(y_true, y_pred)))
-    #print("Recall:   " + str(recall_score(y_true, y_pred, average='micro')))
-    #print("Precision:        " + str(precision_score(y_true, y_pred, average='micro')))
+    # alternative method to output accuracy
+    #print("Accuracy:  " + str(accuracy_score(y_true, y_pred)))
 
 

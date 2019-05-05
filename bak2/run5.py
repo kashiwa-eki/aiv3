@@ -48,6 +48,7 @@ if args.data_path:
     data_path = args.data_path
 
 
+
 # generate a sequence from a language model
 def generate_seq(model, tokenizer, max_length, seed_text, n_words):
         in_text = seed_text
@@ -117,26 +118,39 @@ if args.run_opt == 1:
     vocab_size = len(tokenizer.word_index) + 1
     print('Vocabulary Size: %d' % vocab_size)
 
-    # create line-based sequences; train on last two words of each sentence
+    encoded = tokenizer.texts_to_sequences([train_doc])[0]
+
+    # create line-based sequences
     sequences = list()
-    for line in train_doc.split('\n'):
-        encoded = tokenizer.texts_to_sequences([line])[0]
-        #print(encoded)
 
-        startnum = 0
+    #create sequences
+    for i in range(8, len(encoded)):
+        sequence = encoded[i-8:i+1]
+        sequences.append(sequence)
+        i += 8
+    for i in range(7, len(encoded)):
+        sequence = encoded[i-7:i+1]
+        sequences.append(sequence)
+        i += 7
+    for i in range(6, len(encoded)):
+        sequence = encoded[i-6:i+1]
+        sequences.append(sequence)
+        i += 6
+    for i in range(5, len(encoded)):
+        sequence = encoded[i-5:i+1]
+        sequences.append(sequence)
+        i += 5
+    for i in range(4, len(encoded)):
+        sequence = encoded[i-4:i+1]
+        sequences.append(sequence)
+        i += 4
+    for i in range(3, len(encoded)):
+        sequence = encoded[i-3:i+1]
+        sequences.append(sequence)
+        i += 3
 
-        for i in range(startnum, len(encoded)-1):
-            sequence = encoded[i:]
-            #print(sequence)
-            sequences.append(sequence)
 
-        for i in range(startnum, len(encoded)-2):
-            sequence = encoded[i:len(encoded)-1]
-            #print(sequence)
-            sequences.append(sequence)
 
-    print('Total Sequences: %d' % len(sequences))
-    
     # get max length of entire sentence for padding
     max_length = max([len(seq) for seq in sequences])
     sequences = pad_sequences(sequences, maxlen=max_length, padding='pre')
@@ -149,15 +163,17 @@ if args.run_opt == 1:
     # convert y values to one hot encoding
     y_train = to_categorical(y_train, num_classes=vocab_size)
 
-    # create model with single hidden LSTM layer with 512 memory units
+    hidden_size = 512
+    embedding_size = 100
+
     model = Sequential()
-    # add learned word embedding in input layer
-    model.add(Embedding(vocab_size, 500, input_length=max_length-1))
-    # add single hidden LSTM layer with 512 memory units
-    model.add(LSTM(512))
-    # add dropout layer to prevent overfitting
-    model.add(Dropout(0.5))
-    # output layer with softmax to normalize
+    model.add(Embedding(vocab_size, embedding_size, input_length=max_length-1))
+    model.add(LSTM(hidden_size, return_sequences=True))
+    model.add(Dropout(0.4))
+    model.add(LSTM(hidden_size))
+    model.add(Dropout(0.4))
+    #model.add(TimeDistributed(Dense(vocab_size)))
+    #model.add(Activation('softmax'))
     model.add(Dense(vocab_size, activation='softmax'))
     print(model.summary())
 
@@ -165,7 +181,7 @@ if args.run_opt == 1:
     model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
 
     # fit model using training data. validate using 10% of training data which is not trained on. 10 epochs and batch size of 32.
-    model.fit(X_train, y_train, validation_split=0.1, batch_size=128, epochs=5, verbose=2)
+    model.fit(X_train, y_train, validation_split=0.1, batch_size=128, epochs=10, verbose=2)
 
     # save model
     model.save(model_file)
@@ -187,7 +203,7 @@ elif args.run_opt == 2:
     word2_right = 0
     word2_wrong = 0
     total = 0
-    max_length = 14
+    max_length = 9 
 
     # evaluate model using untrained test data
     with open(test_file, 'r') as f:

@@ -37,8 +37,6 @@ data_path = "data"
 source_file = data_path + "/review.dat"
 train_file = data_path + "/train.txt"
 test_file = data_path + "/test.txt"
-pickle_file = data_path + "/tokenizer.pickle"
-model_file = data_path + "/lstm_model.h5"
 
 parser = argparse.ArgumentParser()
 parser.add_argument('run_opt', type=int, default=1, help='An integer: 1 to train, 2 to test')
@@ -46,6 +44,7 @@ parser.add_argument('--data_path', type=str, default=data_path, help='The full p
 args = parser.parse_args()
 if args.data_path:
     data_path = args.data_path
+
 
 
 # generate a sequence from a language model
@@ -110,30 +109,35 @@ if args.run_opt == 1:
     tokenizer.fit_on_texts([train_doc])
 
     # save tokenizer for making predictions later
-    with open(pickle_file, 'wb') as handle:
+    with open('data/tokenizer.pickle', 'wb') as handle:
         pickle.dump(tokenizer, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
     # determine the vocabulary size
     vocab_size = len(tokenizer.word_index) + 1
     print('Vocabulary Size: %d' % vocab_size)
 
-    # create line-based sequences; train on last two words of each sentence
+
+    encoded = tokenizer.texts_to_sequences([train_doc])[0]
+
+    # create line-based sequences
     sequences = list()
-    for line in train_doc.split('\n'):
-        encoded = tokenizer.texts_to_sequences([line])[0]
-        #print(encoded)
 
-        startnum = 0
-
-        for i in range(startnum, len(encoded)-1):
-            sequence = encoded[i:]
-            #print(sequence)
-            sequences.append(sequence)
-
-        for i in range(startnum, len(encoded)-2):
-            sequence = encoded[i:len(encoded)-1]
-            #print(sequence)
-            sequences.append(sequence)
+    # create sequences
+    for i in range(1, len(encoded)):
+        sequence = encoded[i-1:i+1]
+        sequences.append(sequence)
+    for i in range(2, len(encoded)):
+        sequence = encoded[i-2:i+1]
+        sequences.append(sequence)
+    for i in range(3, len(encoded)):
+        sequence = encoded[i-3:i+1]
+        sequences.append(sequence)
+    for i in range(4, len(encoded)):
+        sequence = encoded[i-4:i+1]
+        sequences.append(sequence)
+    for i in range(5, len(encoded)):
+        sequence = encoded[i-5:i+1]
+        sequences.append(sequence)
 
     print('Total Sequences: %d' % len(sequences))
     
@@ -149,34 +153,46 @@ if args.run_opt == 1:
     # convert y values to one hot encoding
     y_train = to_categorical(y_train, num_classes=vocab_size)
 
-    # create model with single hidden LSTM layer with 512 memory units
+    hidden_size = 512
+    embedding_size = 100
+
     model = Sequential()
-    # add learned word embedding in input layer
-    model.add(Embedding(vocab_size, 500, input_length=max_length-1))
-    # add single hidden LSTM layer with 512 memory units
-    model.add(LSTM(512))
-    # add dropout layer to prevent overfitting
+    model.add(Embedding(vocab_size, embedding_size, input_length=max_length-1))
+    model.add(LSTM(hidden_size, return_sequences=True))
+    model.add(LSTM(hidden_size))
     model.add(Dropout(0.5))
-    # output layer with softmax to normalize
     model.add(Dense(vocab_size, activation='softmax'))
     print(model.summary())
+
+
+    # create model with single hidden LSTM layer with 512 memory units
+    #model = Sequential()
+    # add learned word embedding in input layer
+    #model.add(Embedding(vocab_size, 500, input_length=max_length-1))
+    # add single hidden LSTM layer with 512 memory units
+    #model.add(LSTM(512))
+    # add dropout layer to prevent overfitting
+    #model.add(Dropout(0.2))
+    # output layer with softmax to normalize
+    #model.add(Dense(vocab_size, activation='softmax'))
+    #print(model.summary())
 
     # compile model and evaluate using accuracy
     model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
 
-    # fit model using training data. validate using 10% of training data which is not trained on. 10 epochs and batch size of 32.
-    model.fit(X_train, y_train, validation_split=0.1, batch_size=128, epochs=5, verbose=2)
+    # fit model using training data. validate using 20% of training data which is not trained on. 10 epochs and batch size of 32.
+    model.fit(X_train, y_train, validation_split=0.2, batch_size=32, epochs=40, verbose=2)
 
     # save model
-    model.save(model_file)
+    model.save(data_path + '/lstm_model.h5')
 
 elif args.run_opt == 2:
     # loading
-    with open(pickle_file, 'rb') as handle:
+    with open(data_path + '/tokenizer.pickle', 'rb') as handle:
         tokenizer = pickle.load(handle)
 
     # load the model
-    model = load_model(model_file)
+    model = load_model(data_path + "/lstm_model.h5")
     
     y_true = []
     y_pred = []
@@ -187,7 +203,7 @@ elif args.run_opt == 2:
     word2_right = 0
     word2_wrong = 0
     total = 0
-    max_length = 14
+    max_length = 6 
 
     # evaluate model using untrained test data
     with open(test_file, 'r') as f:
@@ -214,7 +230,7 @@ elif args.run_opt == 2:
             for i in range(startnum, len(owords)-2):
                 seed_text += owords[i] + " "
             seed_text = seed_text.strip()
-            print("Seed:     " + seed_text)
+            #print("Seed:     " + seed_text)
             # get predicted last two words
             end_pred = generate_seq(model, tokenizer, max_length-1, seed_text, 2)
             print("Predict:  " + end_pred)

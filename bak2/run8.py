@@ -48,6 +48,7 @@ if args.data_path:
     data_path = args.data_path
 
 
+
 # generate a sequence from a language model
 def generate_seq(model, tokenizer, max_length, seed_text, n_words):
         in_text = seed_text
@@ -117,23 +118,34 @@ if args.run_opt == 1:
     vocab_size = len(tokenizer.word_index) + 1
     print('Vocabulary Size: %d' % vocab_size)
 
-    # create line-based sequences; train on last two words of each sentence
+    encoded = tokenizer.texts_to_sequences([train_doc])[0]
+
+    # create line-based sequences
     sequences = list()
     for line in train_doc.split('\n'):
         encoded = tokenizer.texts_to_sequences([line])[0]
         #print(encoded)
 
-        startnum = 0
-
-        for i in range(startnum, len(encoded)-1):
-            sequence = encoded[i:]
-            #print(sequence)
+        # create sequences
+        for i in range(2, len(encoded)):
+            sequence = encoded[i-2:i+1]
             sequences.append(sequence)
-
-        for i in range(startnum, len(encoded)-2):
-            sequence = encoded[i:len(encoded)-1]
-            #print(sequence)
+        for i in range(3, len(encoded)):
+            sequence = encoded[i-3:i+1]
             sequences.append(sequence)
+        for i in range(4, len(encoded)):
+            sequence = encoded[i-4:i+1]
+            sequences.append(sequence)
+        for i in range(5, len(encoded)):
+            sequence = encoded[i-5:i+1]
+            sequences.append(sequence)    
+        for i in range(6, len(encoded)):
+            sequence = encoded[i-6:i+1]
+            sequences.append(sequence)    
+        for i in range(7, len(encoded)):
+            sequence = encoded[i-7:i+1]
+            sequences.append(sequence)    
+    
 
     print('Total Sequences: %d' % len(sequences))
     
@@ -156,7 +168,7 @@ if args.run_opt == 1:
     # add single hidden LSTM layer with 512 memory units
     model.add(LSTM(512))
     # add dropout layer to prevent overfitting
-    model.add(Dropout(0.5))
+    model.add(Dropout(0.4))
     # output layer with softmax to normalize
     model.add(Dense(vocab_size, activation='softmax'))
     print(model.summary())
@@ -165,7 +177,7 @@ if args.run_opt == 1:
     model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
 
     # fit model using training data. validate using 10% of training data which is not trained on. 10 epochs and batch size of 32.
-    model.fit(X_train, y_train, validation_split=0.1, batch_size=128, epochs=5, verbose=2)
+    model.fit(X_train, y_train, validation_split=0.1, batch_size=128, epochs=3, verbose=2)
 
     # save model
     model.save(model_file)
@@ -187,7 +199,7 @@ elif args.run_opt == 2:
     word2_right = 0
     word2_wrong = 0
     total = 0
-    max_length = 14
+    max_length = 8
 
     # evaluate model using untrained test data
     with open(test_file, 'r') as f:

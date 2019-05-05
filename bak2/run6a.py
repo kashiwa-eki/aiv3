@@ -27,6 +27,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import confusion_matrix
 from sklearn.metrics import accuracy_score, recall_score, precision_score
 from sklearn.metrics import classification_report
+from statistics import mean, median, mode
 import numpy as np
 import random
 import sys
@@ -46,6 +47,7 @@ parser.add_argument('--data_path', type=str, default=data_path, help='The full p
 args = parser.parse_args()
 if args.data_path:
     data_path = args.data_path
+
 
 
 # generate a sequence from a language model
@@ -98,12 +100,15 @@ if args.run_opt == 1:
             train_doc += line + '\n'
         cnt += 1
 
+
     # save training and test datasets to documents
     with open(train_file, 'w') as f:
         f.write(train_doc)
     with open(test_file, 'w') as f:
         f.write(test_doc)
 
+    seq_length = 7
+    print('sequence length: ' + str(seq_length))
 
     # prepare the tokenizer on the source text
     tokenizer = Tokenizer()
@@ -117,26 +122,27 @@ if args.run_opt == 1:
     vocab_size = len(tokenizer.word_index) + 1
     print('Vocabulary Size: %d' % vocab_size)
 
-    # create line-based sequences; train on last two words of each sentence
+    encoded = tokenizer.texts_to_sequences([train_doc])[0]
+
+    # create line-based sequences
     sequences = list()
     for line in train_doc.split('\n'):
         encoded = tokenizer.texts_to_sequences([line])[0]
-        #print(encoded)
+        print(encoded)
 
-        startnum = 0
+        for i in range(0, len(encoded)-4):
+            for j in range(2, min(9,len(encoded[i:])+1)):
+                sequence = encoded[i:i+j]
+                print(sequence)
+                sequences.append(sequence)
+        print('----------------')
+        #print(sequences[:20])
 
-        for i in range(startnum, len(encoded)-1):
-            sequence = encoded[i:]
-            #print(sequence)
-            sequences.append(sequence)
-
-        for i in range(startnum, len(encoded)-2):
-            sequence = encoded[i:len(encoded)-1]
-            #print(sequence)
-            sequences.append(sequence)
+        #sys.exit()
 
     print('Total Sequences: %d' % len(sequences))
-    
+
+
     # get max length of entire sentence for padding
     max_length = max([len(seq) for seq in sequences])
     sequences = pad_sequences(sequences, maxlen=max_length, padding='pre')
@@ -149,15 +155,16 @@ if args.run_opt == 1:
     # convert y values to one hot encoding
     y_train = to_categorical(y_train, num_classes=vocab_size)
 
-    # create model with single hidden LSTM layer with 512 memory units
+    hidden_size = 512
+    embedding_size = round(vocab_size**0.25)
+
     model = Sequential()
-    # add learned word embedding in input layer
-    model.add(Embedding(vocab_size, 500, input_length=max_length-1))
-    # add single hidden LSTM layer with 512 memory units
-    model.add(LSTM(512))
-    # add dropout layer to prevent overfitting
-    model.add(Dropout(0.5))
-    # output layer with softmax to normalize
+    model.add(Embedding(vocab_size, embedding_size, input_length=max_length-1))
+    model.add(LSTM(hidden_size, return_sequences=True))
+    model.add(LSTM(hidden_size))
+    model.add(Dropout(0.4))
+    #model.add(TimeDistributed(Dense(vocab_size)))
+    #model.add(Activation('softmax'))
     model.add(Dense(vocab_size, activation='softmax'))
     print(model.summary())
 
@@ -165,7 +172,7 @@ if args.run_opt == 1:
     model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
 
     # fit model using training data. validate using 10% of training data which is not trained on. 10 epochs and batch size of 32.
-    model.fit(X_train, y_train, validation_split=0.1, batch_size=128, epochs=5, verbose=2)
+    model.fit(X_train, y_train, validation_split=0.1, batch_size=128, epochs=10, verbose=2)
 
     # save model
     model.save(model_file)
@@ -187,7 +194,7 @@ elif args.run_opt == 2:
     word2_right = 0
     word2_wrong = 0
     total = 0
-    max_length = 14
+    max_length = 8 
 
     # evaluate model using untrained test data
     with open(test_file, 'r') as f:
@@ -214,7 +221,7 @@ elif args.run_opt == 2:
             for i in range(startnum, len(owords)-2):
                 seed_text += owords[i] + " "
             seed_text = seed_text.strip()
-            print("Seed:     " + seed_text)
+            #print("Seed:     " + seed_text)
             # get predicted last two words
             end_pred = generate_seq(model, tokenizer, max_length-1, seed_text, 2)
             print("Predict:  " + end_pred)
